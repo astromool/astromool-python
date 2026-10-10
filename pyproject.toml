@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "astromool"
+version = "1.0.0"
+description = "Official client for the AstroMool Vedic astrology API (Swiss Ephemeris charts, 90 calculators, PDF reports)."
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "AstroMool", email = "developers@astromool.com" }]
+requires-python = ">=3.8"
+dependencies = []
+keywords = ["astrology", "vedic", "kundli", "jyotish", "swiss-ephemeris", "panchang", "api"]
+classifiers = ["Programming Language :: Python :: 3", "License :: OSI Approved :: MIT License", "Operating System :: OS Independent"]
+
+[project.urls]
+Documentation = "https://developers.astromool.com/docs"
+Homepage = "https://developers.astromool.com"
+Source = "https://github.com/astromool/astromool-python"
+Issues = "https://github.com/astromool/astromool-python/issues"
+
+[tool.setuptools]
+packages = ["astromool"]
+
+[tool.setuptools.package-data]
+astromool = ["py.typed"]
