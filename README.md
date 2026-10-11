@@ -31,6 +31,21 @@ read `meta["warnings"]` - it flags things like a birth time that did not exist b
 | `geo.search(q, limit)` / `geo.timezone(tz_id, date, time)` | `/v1/geo/*` |
 | `meta.ayanamsas(date)`, `usage()`, `health()` | |
 
+## Charts, dasha, panchang, matching and more (1.1.0)
+
+```python
+b = {"date": "1995-08-14", "time": "10:35", "place": "Patna"}   # or lat/lon/tz_id; "birth_time_unknown": True for a noon chart
+am.vedic.chart(b); am.vedic.divisional(b, "D9"); am.vedic.ashtakavarga(b)
+svg = am.vedic.chart_image(b, style="south", chart="D9")        # format="png" -> bytes
+am.dasha.vimshottari(b); am.dasha.yogini(b)
+am.panchang.day({"place": "Delhi"}, "2026-10-11")                # .rahu_kaal / .choghadiya / .hora
+am.match.ashtakoot(groom, bride); am.numerology.core("Asha Verma", "1995-08-14")
+am.dosha.check("mangal", b); am.dosha.summary(b); am.remedies.get("gemstone", b)
+am.transit.natal(b); am.kp.chart(b); am.western.natal(b)
+am.batch([{"path": "/v1/vedic/houses", "body": b}, {"method": "GET", "path": "/v1/usage"}])
+am.topic("/v1/muhurat/vivah", {"person": {"place": "Delhi"}, "params": {"year": 2027}})   # any topic endpoint
+```
+
 ## Reports
 
 ```python

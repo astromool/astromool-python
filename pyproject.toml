@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "astromool"
-version = "1.0.0"
+version = "1.1.0"
 description = "Official client for the AstroMool Vedic astrology API (Swiss Ephemeris charts, 90 calculators, PDF reports)."
 readme = "README.md"
 license = { text = "MIT" }

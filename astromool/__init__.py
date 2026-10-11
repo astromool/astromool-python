@@ -19,7 +19,7 @@ import urllib.parse
 import urllib.request
 import uuid
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 __all__ = ["AstroMool", "AstroMoolError", "verify_webhook", "__version__"]
 _RETRY_STATUS = {500, 502, 503, 504}
 
@@ -109,6 +109,69 @@ class _Meta(_Group):
         return self._c.request("GET", "/v1/meta/ayanamsas", query=_clean({"date": date}))
 
 
+class _Vedic(_Group):
+    def chart(self, birth): return self._c.request("POST", "/v1/vedic/chart", birth)
+    def houses(self, birth): return self._c.request("POST", "/v1/vedic/houses", birth)
+    def ashtakavarga(self, birth): return self._c.request("POST", "/v1/vedic/ashtakavarga", birth)
+
+    def divisional(self, birth, chart=None):
+        """All 16 vargas, or one: divisional(birth, "D9")."""
+        return self._c.request("POST", "/v1/vedic/divisional" + ("/" + urllib.parse.quote(chart, safe="") if chart else ""), birth)
+
+    def chart_image(self, birth, style="north", chart="D1", format="svg", theme="light", size=480):
+        """The chart picture: str (svg) or bytes (png)."""
+        raw = self._c._binary("/v1/chart/image", dict(birth, style=style, chart=chart, format=format, theme=theme, size=size))
+        return raw.decode("utf-8") if format == "svg" else raw
+
+
+class _Dasha(_Group):
+    def vimshottari(self, birth): return self._c.request("POST", "/v1/dasha/vimshottari", birth)
+    def yogini(self, birth): return self._c.request("POST", "/v1/dasha/yogini", birth)
+
+
+class _Panchang(_Group):
+    """place = {"lat", "lon", "tz_id"} or {"place": "Patna"}; date YYYY-MM-DD (default: today there)."""
+    def day(self, place, date=None): return self._c.request("POST", "/v1/panchang", dict(place, **_clean({"date": date})))
+    def rahu_kaal(self, place, date=None): return self._c.request("POST", "/v1/panchang/rahu-kaal", dict(place, **_clean({"date": date})))
+    def choghadiya(self, place, date=None): return self._c.request("POST", "/v1/panchang/choghadiya", dict(place, **_clean({"date": date})))
+    def hora(self, place, date=None): return self._c.request("POST", "/v1/panchang/hora", dict(place, **_clean({"date": date})))
+
+
+class _Match(_Group):
+    def ashtakoot(self, person, partner): return self._c.request("POST", "/v1/match/ashtakoot", {"person": person, "partner": partner})
+
+
+class _Numerology(_Group):
+    def core(self, name, date, as_of=None): return self._c.request("POST", "/v1/numerology", _clean({"name": name, "date": date, "as_of": as_of}))
+
+
+class _Dosha(_Group):
+    def check(self, name, birth): return self._c.request("POST", "/v1/dosha/" + urllib.parse.quote(name, safe=""), birth)
+    def summary(self, birth): return self._c.request("POST", "/v1/dosha/summary", birth)
+
+
+class _Remedies(_Group):
+    def get(self, name, birth): return self._c.request("POST", "/v1/remedies/" + urllib.parse.quote(name, safe=""), birth)
+
+
+class _Transit(_Group):
+    def positions(self, **moment): return self._c.request("POST", "/v1/transit/positions", moment)
+    def natal(self, birth, on_date=None): return self._c.request("POST", "/v1/transit/natal", dict(birth, **_clean({"on_date": on_date})))
+
+
+class _KP(_Group):
+    def chart(self, birth): return self._c.request("POST", "/v1/kp/chart", birth)
+    def ruling_planets(self, **moment): return self._c.request("POST", "/v1/kp/ruling-planets", moment)
+    def sub_table(self): return self._c.request("GET", "/v1/kp/sub-table")
+
+
+class _Western(_Group):
+    def natal(self, birth): return self._c.request("POST", "/v1/western/natal", birth)
+    def synastry(self, person, partner): return self._c.request("POST", "/v1/western/synastry", {"person": person, "partner": partner})
+    def progressions(self, birth, on_date=None): return self._c.request("POST", "/v1/western/progressions", dict(birth, **_clean({"on_date": on_date})))
+    def composite(self, person, partner): return self._c.request("POST", "/v1/western/composite", {"person": person, "partner": partner})
+
+
 def _json(raw):
     try:
         return json.loads(raw.decode("utf-8")) if raw else None
@@ -124,6 +187,9 @@ class AstroMool:
             raise ValueError("AstroMool: pass your API key (am_test_..., am_live_... or am_pub_...)")
         self.api_key, self.base_url, self.timeout, self.max_retries = api_key, base_url.rstrip("/"), timeout, max_retries
         self.calculators, self.reports, self.geo, self.meta = _Calculators(self), _Reports(self), _Geo(self), _Meta(self)
+        self.vedic, self.dasha, self.panchang, self.match = _Vedic(self), _Dasha(self), _Panchang(self), _Match(self)
+        self.numerology, self.dosha, self.remedies, self.transit = _Numerology(self), _Dosha(self), _Remedies(self), _Transit(self)
+        self.kp, self.western = _KP(self), _Western(self)
 
     def planets(self, birth, ayanamsa=None, node=None):
         """Ascendant and the nine grahas. birth = {date, time, tz_id or utc_offset, lat, lon}."""
@@ -134,6 +200,23 @@ class AstroMool:
 
     def health(self):
         return self.request("GET", "/v1/health")
+
+    def batch(self, requests):
+        """Up to 20 calls in one request: [{"method"?, "path", "body"?}]; each is metered as if called alone."""
+        return self.request("POST", "/v1/batch", {"requests": requests})
+
+    def topic(self, path, body):
+        """Any topic endpoint, e.g. topic("/v1/muhurat/vivah", {"person": {"place": "Delhi"}, "params": {"year": 2027}})."""
+        return self.request("POST", path, body)
+
+    def _binary(self, path, body):
+        req = urllib.request.Request(self.base_url + path, data=json.dumps(body).encode("utf-8"), method="POST",
+                                     headers={"X-API-Key": self.api_key, "Content-Type": "application/json", "User-Agent": "astromool-python/" + __version__})
+        try:
+            with urllib.request.urlopen(req, timeout=self.timeout) as r:
+                return r.read()
+        except urllib.error.HTTPError as e:
+            raise AstroMoolError(e.code, _json(e.read()), e.headers.get("X-Request-Id"))
 
     def request(self, method, path, body=None, headers=None, query=None):
         url = self.base_url + path + ("?" + urllib.parse.urlencode(query) if query else "")
